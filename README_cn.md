@@ -1,12 +1,10 @@
 # gin-grpc-network
-A network library that can handle both http and grpc requests
+一个可以同时处理http和grpc请求的网络库
 
-## [中文文档](./README_cn.md)
+# 例子
+[完整的例子](https://github.com/DAN-AND-DNA/easyman)
 
-# Example
-[Complete example](https://github.com/DAN-AND-DNA/easyman)
-
- - Write a Handler to handle grpc and http requests:  
+ - 写一个handler就可以处理grpc和http的请求:  
 ```golang
 func setupHandlers() {
 	// grpc 以pkg service method来区别请求
@@ -41,7 +39,7 @@ func setupHandlers() {
 }
 ```
 
-## http performance
+## http性能
 ```c++
 goos: windows
 goarch: amd64
@@ -53,5 +51,5 @@ BenchmarkGinGrpc-12      3528080              1675 ns/op            1496 B/op
 PASS
 ```
  
-## grpc performance
-The middleware is used, so there is no additional overhead
+## grpc性能
+中间件，故无额外开销
