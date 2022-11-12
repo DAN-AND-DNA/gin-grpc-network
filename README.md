@@ -39,7 +39,7 @@ func setupHandlers() {
 }
 ```
 
-## 性能
+## http性能
 ```c++
 goos: windows
 goarch: amd64
@@ -51,3 +51,5 @@ BenchmarkGinGrpc-12      3528080              1675 ns/op            1496 B/op
 PASS
 ```
  
+## grpc性能
+中间件，故无额外开销
