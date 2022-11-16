@@ -4,10 +4,10 @@ import (
 	"github.com/dan-and-dna/gin-grpc-network/core"
 	"github.com/dan-and-dna/gin-grpc-network/modules/network"
 	"github.com/dan-and-dna/singleinstmodule"
-	"google.golang.org/grpc"
 	"log"
 	"sync"
 	"sync/atomic"
+	"testing"
 	"time"
 
 	"github.com/spf13/viper"
@@ -50,10 +50,10 @@ func (grpc *Grpc) ModuleUnlock() {
 	grpc.CoreChanged()
 }
 
-func (grpc *Grpc) ModuleUnlockTest(b *network.Bench) (*grpc.ClientConn, error) {
+func (grpc *Grpc) ModuleBenchmark(b *testing.B, method string, req, resp interface{}) {
 	grpc.core.Unlock()
 
-	return grpc.Test(b)
+	grpc.Benchmark(b, method, req, resp)
 }
 
 func (grpc *Grpc) ModuleShutdown() {
@@ -108,18 +108,16 @@ func (grpc *Grpc) Recreate() {
 
 }
 
-func (grpc *Grpc) Test(b *network.Bench) (*grpc.ClientConn, error) {
+func (grpc *Grpc) Benchmark(b *testing.B, method string, req, resp interface{}) {
 	cfg := network.ModuleLock().(*core.NetworkCore)
 
 	grpc.core.RLock()
-	defer grpc.core.RUnlock()
-
+	cfg.ListenGrpc = true
 	cfg.GrpcMiddlewares = nil
-
-	cfg.ListenGrpc = grpc.core.Enable
 	cfg.GrpcMiddlewares = append(cfg.GrpcMiddlewares, grpc.core.Middlewares...)
+	grpc.core.RUnlock()
 
-	return network.ModuleUnlockTest(b)
+	network.ModuleBenchmark(b, method, req, resp)
 }
 
 /*

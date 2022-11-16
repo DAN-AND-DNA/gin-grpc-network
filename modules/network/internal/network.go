@@ -119,10 +119,10 @@ func (network *Network) ModuleUnlock() {
 	network.CoreChanged()
 }
 
-func (network *Network) ModuleUnlockTest(b *Bench) (*grpc.ClientConn, error) {
+func (network *Network) ModuleBenchmark(b *testing.B, method string, req, resp interface{}) {
 	network.core.Unlock()
 
-	return network.Test(b)
+	network.Benchmark(b, method, req, resp)
 }
 
 func (network *Network) Start() {
@@ -292,9 +292,8 @@ func (network *Network) NotifyHandler(ctx context.Context, req interface{}, key 
 }
 
 type Bench struct {
-	MockCh  chan struct{}
-	b       *testing.B
-	isStart bool
+	MockCh chan struct{}
+	b      *testing.B
 }
 
 func NewBench(b *testing.B) *Bench {
@@ -314,7 +313,6 @@ func (bench *Bench) HandleRPC(ctx context.Context, s stats.RPCStats) {
 	} else if _, ok := s.(*stats.End); ok {
 		bench.b.StopTimer()
 		bench.MockCh <- struct{}{}
-		//bench.MockCh <- 7
 	}
 }
 
@@ -326,23 +324,27 @@ func (bench *Bench) HandleConn(context.Context, stats.ConnStats) {
 
 }
 
-func (network *Network) Test(b *Bench) (*grpc.ClientConn, error) {
+func (network *Network) Benchmark(b *testing.B, method string, req, resp interface{}) {
+	network.Stop()
+
+	bc := NewBench(b)
+
 	lis := bufconn.Listen(256 * 1024)
 	network.grpcListener = lis
+	network.core.GrpcMiddlewares = nil
 	network.core.GrpcMiddlewares = append(network.core.GrpcMiddlewares, grpcroute.GrpcRoute(network.grpcRouteOption), network.NoFound)
 	network.grpcSrv = grpc.NewServer(
 		grpc.ReadBufferSize(128*1024),
 		grpc.WriteBufferSize(128*1024),
-		grpc.StatsHandler(stats.Handler(b)),
+		grpc.StatsHandler(stats.Handler(bc)),
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			network.core.GrpcMiddlewares...,
 		)),
 	)
 
 	network.mu.Lock()
-	for serviceName, desc := range network.grpcServiceDescMap {
+	for _, desc := range network.grpcServiceDescMap {
 		network.grpcSrv.RegisterService(desc, nil)
-		log.Println("[network] 成功注册grpc服务:", serviceName)
 	}
 	network.mu.Unlock()
 
@@ -358,10 +360,22 @@ func (network *Network) Test(b *Bench) (*grpc.ClientConn, error) {
 
 	conn, err := grpc.DialContext(context.Background(), "", clientOpts...)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	return conn, nil
+	b.StopTimer()
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+
+		err := conn.Invoke(context.TODO(), method, req, resp)
+		if err != nil {
+			panic(err)
+		}
+
+		<-bc.MockCh
+	}
 }
 
 func GetSingleInst() *Network {

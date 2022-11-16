@@ -44,8 +44,8 @@ func ModuleUnlock() {
 	internal.GetSingleInst().ModuleUnlock()
 }
 
-func ModuleUnlockTest(b *Bench) (*grpc.ClientConn, error) {
-	return internal.GetSingleInst().ModuleUnlockTest(b)
+func ModuleBenchmark(b *testing.B, method string, req, resp interface{}) {
+	internal.GetSingleInst().ModuleBenchmark(b, method, req, resp)
 }
 
 func NewBench(b *testing.B) *Bench {
