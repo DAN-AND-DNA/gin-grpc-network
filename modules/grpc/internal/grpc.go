@@ -4,6 +4,7 @@ import (
 	"github.com/dan-and-dna/gin-grpc-network/core"
 	"github.com/dan-and-dna/gin-grpc-network/modules/network"
 	"github.com/dan-and-dna/singleinstmodule"
+	"google.golang.org/grpc"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -47,6 +48,12 @@ func (grpc *Grpc) ModuleLock() singleinstmodule.ModuleCore {
 func (grpc *Grpc) ModuleUnlock() {
 	grpc.core.Unlock()
 	grpc.CoreChanged()
+}
+
+func (grpc *Grpc) ModuleUnlockTest(b *network.Bench) (*grpc.ClientConn, error) {
+	grpc.core.Unlock()
+
+	return grpc.Test(b)
 }
 
 func (grpc *Grpc) ModuleShutdown() {
@@ -99,6 +106,20 @@ func (grpc *Grpc) Recreate() {
 		cfg.GrpcMiddlewares = append(cfg.GrpcMiddlewares, grpc.core.Middlewares...)
 	}
 
+}
+
+func (grpc *Grpc) Test(b *network.Bench) (*grpc.ClientConn, error) {
+	cfg := network.ModuleLock().(*core.NetworkCore)
+
+	grpc.core.RLock()
+	defer grpc.core.RUnlock()
+
+	cfg.GrpcMiddlewares = nil
+
+	cfg.ListenGrpc = grpc.core.Enable
+	cfg.GrpcMiddlewares = append(cfg.GrpcMiddlewares, grpc.core.Middlewares...)
+
+	return network.ModuleUnlockTest(b)
 }
 
 /*

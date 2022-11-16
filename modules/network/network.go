@@ -6,9 +6,11 @@ import (
 	"github.com/dan-and-dna/gin-grpc-network/modules/network/internal"
 	"github.com/dan-and-dna/singleinstmodule"
 	"google.golang.org/grpc"
+	"testing"
 )
 
 type Network = internal.Network
+type Bench = internal.Bench
 
 func NotifyListeners(ctx context.Context, req interface{}, key string) {
 	internal.GetSingleInst().NotifyListeners(ctx, req, key)
@@ -40,4 +42,12 @@ func ModuleLock() singleinstmodule.ModuleCore {
 
 func ModuleUnlock() {
 	internal.GetSingleInst().ModuleUnlock()
+}
+
+func ModuleUnlockTest(b *Bench) (*grpc.ClientConn, error) {
+	return internal.GetSingleInst().ModuleUnlockTest(b)
+}
+
+func NewBench(b *testing.B) *Bench {
+	return internal.NewBench(b)
 }

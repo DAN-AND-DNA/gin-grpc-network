@@ -8,12 +8,16 @@ import (
 	"github.com/dan-and-dna/gin-grpc-network/utils"
 	"github.com/dan-and-dna/grpc-route"
 	"github.com/dan-and-dna/singleinstmodule"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/test/bufconn"
 	"log"
 	"net"
 	"net/http"
 	"sync"
 	"sync/atomic"
+	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -113,6 +117,12 @@ func (network *Network) ModuleUnlock() {
 	network.core.Unlock()
 
 	network.CoreChanged()
+}
+
+func (network *Network) ModuleUnlockTest(b *Bench) (*grpc.ClientConn, error) {
+	network.core.Unlock()
+
+	return network.Test(b)
 }
 
 func (network *Network) Start() {
@@ -279,6 +289,79 @@ func (network *Network) NotifyHandler(ctx context.Context, req interface{}, key 
 	}
 
 	return nil, status.Error(codes.NotFound, "未知请求")
+}
+
+type Bench struct {
+	MockCh  chan struct{}
+	b       *testing.B
+	isStart bool
+}
+
+func NewBench(b *testing.B) *Bench {
+	bc := &Bench{}
+	bc.MockCh = make(chan struct{})
+	bc.b = b
+	return bc
+}
+
+func (bench *Bench) TagRPC(ctx context.Context, rpcTagInfo *stats.RPCTagInfo) context.Context {
+	return ctx
+}
+
+func (bench *Bench) HandleRPC(ctx context.Context, s stats.RPCStats) {
+	if _, ok := s.(*stats.Begin); ok {
+		bench.b.StartTimer()
+	} else if _, ok := s.(*stats.End); ok {
+		bench.b.StopTimer()
+		bench.MockCh <- struct{}{}
+		//bench.MockCh <- 7
+	}
+}
+
+func (bench *Bench) TagConn(ctx context.Context, connTagInfo *stats.ConnTagInfo) context.Context {
+	return ctx
+}
+
+func (bench *Bench) HandleConn(context.Context, stats.ConnStats) {
+
+}
+
+func (network *Network) Test(b *Bench) (*grpc.ClientConn, error) {
+	lis := bufconn.Listen(256 * 1024)
+	network.grpcListener = lis
+	network.core.GrpcMiddlewares = append(network.core.GrpcMiddlewares, grpcroute.GrpcRoute(network.grpcRouteOption), network.NoFound)
+	network.grpcSrv = grpc.NewServer(
+		grpc.ReadBufferSize(128*1024),
+		grpc.WriteBufferSize(128*1024),
+		grpc.StatsHandler(stats.Handler(b)),
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			network.core.GrpcMiddlewares...,
+		)),
+	)
+
+	network.mu.Lock()
+	for serviceName, desc := range network.grpcServiceDescMap {
+		network.grpcSrv.RegisterService(desc, nil)
+		log.Println("[network] 成功注册grpc服务:", serviceName)
+	}
+	network.mu.Unlock()
+
+	go network.grpcSrv.Serve(network.grpcListener)
+
+	var clientOpts []grpc.DialOption
+	clientOpts = append(clientOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	clientOpts = append(clientOpts, grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+		return lis.Dial()
+	}))
+	clientOpts = append(clientOpts, grpc.WithReadBufferSize(128*1024))
+	clientOpts = append(clientOpts, grpc.WithWriteBufferSize(128*1024))
+
+	conn, err := grpc.DialContext(context.Background(), "", clientOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return conn, nil
 }
 
 func GetSingleInst() *Network {

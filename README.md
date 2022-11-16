@@ -48,10 +48,18 @@ goarch: amd64
 pkg: github.com/dan-and-dna/gin-grpc
 cpu: Intel(R) Core(TM) i7-8700K CPU @ 3.70GHz
 BenchmarkGinGrpc
-BenchmarkGinGrpc-12      3528080              1675 ns/op            1496 B/op
-              13 allocs/op
+BenchmarkGinGrpc-12      3528080              1675 ns/op            1496 B/op           13 allocs/op
 PASS
 ```
  
 ## grpc performance
-The middleware is used, so there is no additional overhead
+The middleware is used, so there is no additional overhead, just grpc-go
+```c++
+goos: windows
+goarch: amd64
+pkg: easyman
+cpu: Intel(R) Core(TM) i7-8700K CPU @ 3.70GHz
+BenchmarkGrpc
+BenchmarkGrpc-12          112734             10224 ns/op            1702 B/op           36 allocs/op
+PASS
+```

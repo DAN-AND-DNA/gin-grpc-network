@@ -52,4 +52,13 @@ PASS
 ```
  
 ## grpc性能
-中间件，故无额外开销
+中间件，故无额外开销，仅为grpc-go的开销
+```c++
+goos: windows
+goarch: amd64
+pkg: easyman
+cpu: Intel(R) Core(TM) i7-8700K CPU @ 3.70GHz
+BenchmarkGrpc
+BenchmarkGrpc-12          112734             10224 ns/op            1702 B/op           36 allocs/op
+PASS
+```
