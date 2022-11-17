@@ -1,7 +1,6 @@
 package network
 
 import (
-	"context"
 	gingrpc "github.com/dan-and-dna/gin-grpc"
 	"github.com/dan-and-dna/gin-grpc-network/modules/network/internal"
 	"github.com/dan-and-dna/singleinstmodule"
@@ -12,12 +11,8 @@ import (
 type Network = internal.Network
 type Bench = internal.Bench
 
-func NotifyListeners(ctx context.Context, req interface{}, key string) {
-	internal.GetSingleInst().NotifyListeners(ctx, req, key)
-}
-
-func ListenProto(pkg, service, method string, listener func(context.Context, interface{})) {
-	internal.GetSingleInst().ListenProto(pkg, service, method, listener)
+func ListenProto(pkg, service, method string, desc *grpc.ServiceDesc, listener func(grpc.ServerStream) error) {
+	internal.GetSingleInst().ListenProto(pkg, service, method, desc, listener)
 }
 
 func StopListenProto(pkg, service, method string) {
@@ -32,22 +27,14 @@ func StopHandleProto(pkg, service, method string) {
 	internal.GetSingleInst().StopHandleProto(pkg, service, method)
 }
 
-func NotifyHandler(ctx context.Context, req interface{}, key string) (interface{}, error) {
-	return internal.GetSingleInst().NotifyHandler(ctx, req, key)
-}
-
 func ModuleLock() singleinstmodule.ModuleCore {
 	return internal.GetSingleInst().ModuleLock()
 }
 
-func ModuleUnlock() {
+func ModuleUnlockRestart() {
 	internal.GetSingleInst().ModuleUnlock()
 }
 
-func ModuleBenchmark(b *testing.B, method string, req, resp interface{}) {
-	internal.GetSingleInst().ModuleBenchmark(b, method, req, resp)
-}
-
-func NewBench(b *testing.B) *Bench {
-	return internal.NewBench(b)
+func ModuleUnlockBenchmark(b *testing.B, method string, req, resp interface{}) {
+	internal.GetSingleInst().ModuleUnlockBenchmark(b, method, req, resp)
 }

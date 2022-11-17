@@ -33,19 +33,20 @@ var (
 )
 
 type Network struct {
-	core               *core.NetworkCore
-	httpSrv            *http.Server
-	httpRouter         *gin.Engine
-	grpcSrv            *grpc.Server
-	grpcListener       net.Listener
-	listeners          map[string][]func(context.Context, interface{})                    // 协议监听者
-	handlers           map[string]func(context.Context, interface{}) (interface{}, error) // 协议处理者
-	ginGrpcOption      *GinGrpcOption                                                     // GinGrpc 选项
-	grpcRouteOption    *GrpcRouteOption                                                   // GrpcRoute 选项
-	grpcServiceDescMap map[string]*grpc.ServiceDesc                                       // grpc 服务
-	isRunning          bool                                                               // 是否正在运行
-	coreChanged        atomic.Bool                                                        // 配置是否更新
-	mu                 sync.Mutex
+	core                  *core.NetworkCore
+	httpSrv               *http.Server
+	httpRouter            *gin.Engine
+	grpcSrv               *grpc.Server
+	grpcListener          net.Listener
+	listeners             map[string][]func(context.Context, interface{})                    // 协议监听者
+	handlers              map[string]func(context.Context, interface{}) (interface{}, error) // 协议处理者
+	ginGrpcOption         *GinGrpcOption                                                     // GinGrpc 选项
+	grpcRouteOption       *GrpcRouteOption                                                   // GrpcRoute 选项
+	grpcRouteOptionStream *GrpcRouteOptionStream                                             // GrpcRouteStream 选项
+	grpcServiceDescMap    map[string]*grpc.ServiceDesc                                       // grpc 服务
+	isRunning             bool                                                               // 是否正在运行
+	coreChanged           atomic.Bool                                                        // 配置是否更新
+	mu                    sync.Mutex
 }
 
 func (network *Network) ModuleConstruct() {
@@ -56,6 +57,7 @@ func (network *Network) ModuleConstruct() {
 	network.grpcServiceDescMap = make(map[string]*grpc.ServiceDesc)
 	network.ginGrpcOption = new(GinGrpcOption)
 	network.grpcRouteOption = new(GrpcRouteOption)
+	network.grpcRouteOptionStream = new(GrpcRouteOptionStream)
 	network.core.Lock()
 	network.core.Enable = true
 	network.core.Unlock()
@@ -119,7 +121,7 @@ func (network *Network) ModuleUnlock() {
 	network.CoreChanged()
 }
 
-func (network *Network) ModuleBenchmark(b *testing.B, method string, req, resp interface{}) {
+func (network *Network) ModuleUnlockBenchmark(b *testing.B, method string, req, resp interface{}) {
 	network.core.Unlock()
 
 	network.Benchmark(b, method, req, resp)
@@ -226,9 +228,15 @@ func (network *Network) Recreate() error {
 
 		// grpc中间件
 		network.core.GrpcMiddlewares = append(network.core.GrpcMiddlewares, grpcroute.GrpcRoute(network.grpcRouteOption), network.NoFound)
-		network.grpcSrv = grpc.NewServer(grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-			network.core.GrpcMiddlewares...,
-		)))
+		network.core.GrpcMiddlewaresStream = append(network.core.GrpcMiddlewaresStream, grpcroute.GrpcRouteStream(network.grpcRouteOptionStream), network.NoFoundStream)
+		network.grpcSrv = grpc.NewServer(
+			grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+				network.core.GrpcMiddlewares...,
+			)),
+			grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+				network.core.GrpcMiddlewaresStream...,
+			)),
+		)
 
 		network.mu.Lock()
 		defer network.mu.Unlock()
@@ -246,16 +254,23 @@ func (network *Network) NoFound(ctx context.Context, req interface{}, info *grpc
 	return nil, status.New(codes.NotFound, "no service can help you").Err()
 }
 
-func (network *Network) ListenProto(pkg, service, method string, listener func(context.Context, interface{})) {
-	// TODO
+func (network *Network) NoFoundStream(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	return status.New(codes.NotFound, "no service can help you").Err()
+}
+
+func (network *Network) ListenProto(pkg, service, method string, desc *grpc.ServiceDesc, listener func(grpc.ServerStream) error) {
+	network.grpcRouteOptionStream.SetHandler(utils.MakeKey(pkg, service, method), listener)
+	if desc == nil {
+		return
+	}
+
+	network.mu.Lock()
+	defer network.mu.Unlock()
+	network.grpcServiceDescMap[desc.ServiceName] = desc
 }
 
 func (network *Network) StopListenProto(pkg, service, method string) {
-	// TODO
-}
-
-func (network *Network) NotifyListeners(ctx context.Context, req interface{}, key string) {
-	// TODO
+	network.grpcRouteOptionStream.RemoveHandler(utils.MakeKey(pkg, service, method))
 }
 
 func (network *Network) HandleProto(pkg, service, method string, desc *grpc.ServiceDesc, handler gingrpc.Handler) {
@@ -273,22 +288,6 @@ func (network *Network) HandleProto(pkg, service, method string, desc *grpc.Serv
 func (network *Network) StopHandleProto(pkg, service, method string) {
 	network.ginGrpcOption.RemoveGrpcHandler(utils.MakeKey(pkg, service, method))
 	network.grpcRouteOption.RemoveHandler(utils.MakeKey(pkg, service, method))
-}
-
-func (network *Network) NotifyHandler(ctx context.Context, req interface{}, key string) (interface{}, error) {
-	if network.core.ListenHttp {
-		if handler, ok := network.ginGrpcOption.GetHandler(key); ok {
-			return handler.HandleProto(ctx, req)
-		}
-	}
-
-	if network.core.ListenGrpc {
-		if handler, ok := network.grpcRouteOption.GetHandler(key); ok {
-			return handler(ctx, req)
-		}
-	}
-
-	return nil, status.Error(codes.NotFound, "未知请求")
 }
 
 type Bench struct {

@@ -30,8 +30,8 @@ func (option *GrpcRouteOption) SetHandler(key string, h grpcroute.HandleProto) {
 		return
 	}
 
-	option.RLock()
-	defer option.RUnlock()
+	option.Lock()
+	defer option.Unlock()
 
 	if option.Handlers == nil {
 		option.Handlers = make(map[string]grpcroute.HandleProto)
@@ -41,6 +41,45 @@ func (option *GrpcRouteOption) SetHandler(key string, h grpcroute.HandleProto) {
 }
 
 func (option *GrpcRouteOption) RemoveHandler(key string) {
+	option.Lock()
+	defer option.Unlock()
+
+	delete(option.Handlers, key)
+}
+
+type GrpcRouteOptionStream struct {
+	Handlers map[string]grpcroute.HandleProtoStream
+	sync.RWMutex
+}
+
+func (option *GrpcRouteOptionStream) GetHandler(key string) (grpcroute.HandleProtoStream, bool) {
+	option.RLock()
+	defer option.RUnlock()
+
+	handler, ok := option.Handlers[strings.ToLower(key)]
+	if ok {
+		return handler, true
+	}
+
+	return nil, false
+}
+
+func (option *GrpcRouteOptionStream) SetHandler(key string, h grpcroute.HandleProtoStream) {
+	if key == "" || h == nil {
+		return
+	}
+
+	option.Lock()
+	defer option.Unlock()
+
+	if option.Handlers == nil {
+		option.Handlers = make(map[string]grpcroute.HandleProtoStream)
+	}
+
+	option.Handlers[key] = h
+}
+
+func (option *GrpcRouteOptionStream) RemoveHandler(key string) {
 	option.Lock()
 	defer option.Unlock()
 

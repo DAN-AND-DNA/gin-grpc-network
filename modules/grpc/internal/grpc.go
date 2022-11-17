@@ -50,7 +50,7 @@ func (grpc *Grpc) ModuleUnlock() {
 	grpc.CoreChanged()
 }
 
-func (grpc *Grpc) ModuleBenchmark(b *testing.B, method string, req, resp interface{}) {
+func (grpc *Grpc) ModuleUnlockBenchmark(b *testing.B, method string, req, resp interface{}) {
 	grpc.core.Unlock()
 
 	grpc.Benchmark(b, method, req, resp)
@@ -92,18 +92,20 @@ func (grpc *Grpc) CoreChanged() {
 
 func (grpc *Grpc) Recreate() {
 	cfg := network.ModuleLock().(*core.NetworkCore)
-	defer network.ModuleUnlock()
+	defer network.ModuleUnlockRestart()
 
 	grpc.core.RLock()
 	defer grpc.core.RUnlock()
 
 	cfg.GrpcMiddlewares = nil
+	cfg.GrpcMiddlewaresStream = nil
 
 	cfg.ListenGrpc = grpc.core.Enable
 	if cfg.ListenGrpc {
 		cfg.ListenIp = grpc.core.ListenIp
 		cfg.ListenPort = grpc.core.ListenPort
 		cfg.GrpcMiddlewares = append(cfg.GrpcMiddlewares, grpc.core.Middlewares...)
+		cfg.GrpcMiddlewaresStream = append(cfg.GrpcMiddlewaresStream, grpc.core.MiddlewaresStream...)
 	}
 
 }
@@ -115,9 +117,11 @@ func (grpc *Grpc) Benchmark(b *testing.B, method string, req, resp interface{}) 
 	cfg.ListenGrpc = true
 	cfg.GrpcMiddlewares = nil
 	cfg.GrpcMiddlewares = append(cfg.GrpcMiddlewares, grpc.core.Middlewares...)
+	cfg.GrpcMiddlewaresStream = nil
+	cfg.GrpcMiddlewaresStream = append(cfg.GrpcMiddlewaresStream, grpc.core.MiddlewaresStream...)
 	grpc.core.RUnlock()
 
-	network.ModuleBenchmark(b, method, req, resp)
+	network.ModuleUnlockBenchmark(b, method, req, resp)
 }
 
 /*

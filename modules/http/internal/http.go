@@ -86,7 +86,7 @@ func (http *Http) CoreChanged() {
 
 func (http *Http) Recreate() {
 	cfg := network.ModuleLock().(*core.NetworkCore)
-	defer network.ModuleUnlock()
+	defer network.ModuleUnlockRestart()
 
 	http.core.RLock()
 	defer http.core.RUnlock()

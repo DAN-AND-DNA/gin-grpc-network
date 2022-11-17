@@ -12,10 +12,10 @@ func ModuleLock() singleinstmodule.ModuleCore {
 	return internal.GetSingleInst().ModuleLock()
 }
 
-func ModuleUnlock() {
+func ModuleUnlockRestart() {
 	internal.GetSingleInst().ModuleUnlock()
 }
 
-func ModuleBenchmark(b *testing.B, method string, req, resp interface{}) {
-	internal.GetSingleInst().ModuleBenchmark(b, method, req, resp)
+func ModuleUnlockBenchmark(b *testing.B, method string, req, resp interface{}) {
+	internal.GetSingleInst().ModuleUnlockBenchmark(b, method, req, resp)
 }
