@@ -4,15 +4,15 @@ go 1.19
 
 require (
 	github.com/dan-and-dna/gin-grpc v0.0.0-20221109164324-7d4ba9c7345b
+	github.com/dan-and-dna/grpc-route v0.0.0-20221117025141-4fa6cc23ec72
 	github.com/dan-and-dna/singleinstmodule v0.0.0-20221111094655-2dd9a2972075
 	github.com/gin-gonic/gin v1.8.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
+	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/spf13/viper v1.14.0
 	go.uber.org/zap v1.23.0
 	google.golang.org/grpc v1.50.1
-	github.com/dan-and-dna/grpc-route v0.0.0-20221117025141-4fa6cc23ec72
 )
-
 
 require (
 	github.com/fsnotify/fsnotify v1.6.0 // indirect

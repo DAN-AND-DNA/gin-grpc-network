@@ -9,6 +9,6 @@ func ModuleLock() singleinstmodule.ModuleCore {
 	return internal.GetSingleInst().ModuleLock()
 }
 
-func ModuleUnlock() {
+func ModuleUnlockRestart() {
 	internal.GetSingleInst().ModuleUnlock()
 }

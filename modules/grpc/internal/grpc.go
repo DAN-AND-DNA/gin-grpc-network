@@ -4,14 +4,13 @@ import (
 	"github.com/dan-and-dna/gin-grpc-network/core"
 	"github.com/dan-and-dna/gin-grpc-network/modules/network"
 	"github.com/dan-and-dna/singleinstmodule"
+	"github.com/spf13/viper"
+	"go.uber.org/zap"
 	"log"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 var (
@@ -91,23 +90,24 @@ func (grpc *Grpc) CoreChanged() {
 }
 
 func (grpc *Grpc) Recreate() {
-	cfg := network.ModuleLock().(*core.NetworkCore)
-	defer network.ModuleUnlockRestart()
-
 	grpc.core.RLock()
 	defer grpc.core.RUnlock()
 
+	grpcCore := grpc.core
+
+	cfg := network.ModuleLock().(*core.NetworkCore)
+	defer network.ModuleUnlockRestart()
+
 	cfg.GrpcMiddlewares = nil
 	cfg.GrpcMiddlewaresStream = nil
-
-	cfg.ListenGrpc = grpc.core.Enable
+	cfg.ListenGrpc = grpcCore.Enable
 	if cfg.ListenGrpc {
-		cfg.ListenIp = grpc.core.ListenIp
-		cfg.ListenPort = grpc.core.ListenPort
-		cfg.GrpcMiddlewares = append(cfg.GrpcMiddlewares, grpc.core.Middlewares...)
-		cfg.GrpcMiddlewaresStream = append(cfg.GrpcMiddlewaresStream, grpc.core.MiddlewaresStream...)
+		cfg.ListenHttp = false
+		cfg.ListenIp = grpcCore.ListenIp
+		cfg.ListenPort = grpcCore.ListenPort
+		cfg.GrpcMiddlewares = append(cfg.GrpcMiddlewares, grpcCore.Middlewares...)
+		cfg.GrpcMiddlewaresStream = append(cfg.GrpcMiddlewaresStream, grpcCore.MiddlewaresStream...)
 	}
-
 }
 
 func (grpc *Grpc) Benchmark(b *testing.B, method string, req, resp interface{}) {

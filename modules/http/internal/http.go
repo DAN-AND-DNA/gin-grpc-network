@@ -85,26 +85,29 @@ func (http *Http) CoreChanged() {
 }
 
 func (http *Http) Recreate() {
-	cfg := network.ModuleLock().(*core.NetworkCore)
-	defer network.ModuleUnlockRestart()
-
 	http.core.RLock()
 	defer http.core.RUnlock()
+
+	httpCore := http.core
+
+	cfg := network.ModuleLock().(*core.NetworkCore)
+	defer network.ModuleUnlockRestart()
 
 	// 添加中间件
 	cfg.HttpMiddlewares = nil
 	cfg.HttpCtxOptions = nil
 
-	cfg.ListenHttp = http.core.Enable
+	cfg.ListenHttp = httpCore.Enable
 	if cfg.ListenHttp {
-		cfg.ListenIp = http.core.ListenIp
-		cfg.ListenPort = http.core.ListenPort
-		cfg.HttpReadTimeOut = http.core.ReadTimeOut
-		cfg.HttpWriteTimeOut = http.core.WriteTimeOut
-		cfg.HttpPathToServiceName = http.core.PathToServiceName
-		cfg.HttpPath = http.core.Path
-		cfg.HttpMiddlewares = append(cfg.HttpMiddlewares, http.core.Middlewares...)
-		cfg.HttpCtxOptions = append(cfg.HttpCtxOptions, http.core.CtxOptions...)
+		cfg.ListenGrpc = false
+		cfg.ListenIp = httpCore.ListenIp
+		cfg.ListenPort = httpCore.ListenPort
+		cfg.HttpReadTimeOut = httpCore.ReadTimeOut
+		cfg.HttpWriteTimeOut = httpCore.WriteTimeOut
+		cfg.HttpPathToServiceName = httpCore.PathToServiceName
+		cfg.HttpPath = httpCore.Path
+		cfg.HttpMiddlewares = append(cfg.HttpMiddlewares, httpCore.Middlewares...)
+		cfg.HttpCtxOptions = append(cfg.HttpCtxOptions, httpCore.CtxOptions...)
 	}
 }
 
