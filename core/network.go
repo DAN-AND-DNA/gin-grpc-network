@@ -27,8 +27,8 @@ type NetworkCore struct {
 	HttpCtxOptions        []gingrpc.GrpcCtxOption
 
 	// grpc
-	GrpcMiddlewares []grpc.UnaryServerInterceptor // grpc中间件
-
+	GrpcMiddlewares       []grpc.UnaryServerInterceptor  // grpc中间件
+	GrpcMiddlewaresStream []grpc.StreamServerInterceptor // grpc中间件
 }
 
 type Network interface {
