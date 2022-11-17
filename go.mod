@@ -4,18 +4,18 @@ go 1.19
 
 require (
 	github.com/dan-and-dna/gin-grpc v0.0.0-20221109164324-7d4ba9c7345b
-	github.com/dan-and-dna/grpc-route v0.0.0-20221109164309-c41cfcd609c1
 	github.com/dan-and-dna/singleinstmodule v0.0.0-20221111094655-2dd9a2972075
-	github.com/fsnotify/fsnotify v1.6.0
 	github.com/gin-gonic/gin v1.8.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
-	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.14.0
 	go.uber.org/zap v1.23.0
 	google.golang.org/grpc v1.50.1
+	github.com/dan-and-dna/grpc-route v0.0.0-20221117025141-4fa6cc23ec72
 )
 
+
 require (
+	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
@@ -35,6 +35,7 @@ require (
 	github.com/spf13/afero v1.9.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
+	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
